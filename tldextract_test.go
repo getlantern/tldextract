@@ -2,22 +2,14 @@ package tldextract
 
 import (
 	"fmt"
-	"log"
 	"testing"
 )
 
 var (
 	cache      = "/tmp/tld.cache"
-	tldExtract *TLDExtract
+	tldExtract = New()
 	err        error
 )
-
-func init() {
-	tldExtract, err = New(cache, true)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 func assert(url string, expected *Result, returned *Result, t *testing.T) {
 	if (expected.Flag == returned.Flag) && (expected.Root == returned.Root) && (expected.Sub == returned.Sub) && (expected.Tld == returned.Tld) {

@@ -37,7 +37,8 @@ var (
 	ip4regex    = regexp.MustCompile(`(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])`)
 )
 
-func New() (*TLDExtract, error) {
+// New creates a new TLDExtract instance using embedded tld name data.
+func New() *TLDExtract {
 	data := MustAsset("effective_tld_names.dat")
 	ts := strings.Split(string(data), "\n")
 	newMap := make(map[string]*Trie)
@@ -53,7 +54,7 @@ func New() (*TLDExtract, error) {
 		}
 	}
 
-	return &TLDExtract{rootNode: rootNode}, nil
+	return &TLDExtract{rootNode: rootNode}
 }
 
 func addTldRule(rootNode *Trie, labels []string, ex bool) {
@@ -74,7 +75,6 @@ func addTldRule(rootNode *Trie, labels []string, ex bool) {
 }
 
 func (extract *TLDExtract) Extract(u string) *Result {
-	input := u
 	u = strings.ToLower(u)
 	u = schemaregex.ReplaceAllString(u, "")
 	i := strings.Index(u, "@")
