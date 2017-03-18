@@ -1,11 +1,7 @@
 package tldextract
 
 import (
-	"bytes"
-	"fmt"
-	"io/ioutil"
 	"net"
-	"net/http"
 	"regexp"
 	"strings"
 )
@@ -26,9 +22,7 @@ type Result struct {
 }
 
 type TLDExtract struct {
-	CacheFile string
-	rootNode  *Trie
-	debug     bool
+	rootNode *Trie
 }
 
 type Trie struct {
@@ -43,16 +37,8 @@ var (
 	ip4regex    = regexp.MustCompile(`(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])`)
 )
 
-//New create a new *TLDExtract, it may be shared between goroutines,we usually need a single instance in an application.
-func New(cacheFile string, debug bool) (*TLDExtract, error) {
-	data, err := ioutil.ReadFile(cacheFile)
-	if err != nil {
-		data, err = download()
-		if err != nil {
-			return &TLDExtract{}, err
-		}
-		ioutil.WriteFile(cacheFile, data, 0644)
-	}
+func New() (*TLDExtract, error) {
+	data := MustAsset("effective_tld_names.dat")
 	ts := strings.Split(string(data), "\n")
 	newMap := make(map[string]*Trie)
 	rootNode := &Trie{ExceptRule: false, ValidTld: false, matches: newMap}
@@ -67,7 +53,7 @@ func New(cacheFile string, debug bool) (*TLDExtract, error) {
 		}
 	}
 
-	return &TLDExtract{CacheFile: cacheFile, rootNode: rootNode, debug: debug}, nil
+	return &TLDExtract{rootNode: rootNode}, nil
 }
 
 func addTldRule(rootNode *Trie, labels []string, ex bool) {
@@ -109,9 +95,6 @@ func (extract *TLDExtract) Extract(u string) *Result {
 
 	if strings.HasSuffix(u, ".html") {
 		u = u[0 : len(u)-len(".html")]
-	}
-	if extract.debug {
-		fmt.Printf("%s;%s\n", u, input)
 	}
 	return extract.extract(u)
 }
@@ -181,27 +164,4 @@ func subdomain(d string) (string, string) {
 		return "", d
 	}
 	return strings.Join(ps[0:l-1], "."), ps[l-1]
-}
-
-func download() ([]byte, error) {
-	u := "https://publicsuffix.org/list/effective_tld_names.dat"
-	resp, err := http.Get(u)
-	if err != nil {
-		return []byte(""), err
-	}
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	lines := strings.Split(string(body), "\n")
-	var buffer bytes.Buffer
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "//") {
-			buffer.WriteString(line)
-			buffer.WriteString("\n")
-		}
-	}
-
-	return buffer.Bytes(), nil
 }
